@@ -7,6 +7,8 @@ const config = {
   isFindBalance: false,
   isFindBeautiful: true,
   count: 1,
+  sleep: 2000,
+  countLoop: 100,
 }
 function getAddressFromPrivateKey(privateKey) {
   var public = EthereumJS.privateToPublic(Buffer.from(privateKey, 'hex'));
@@ -54,10 +56,10 @@ async function findBeautifulString(pri,addr=""){
   }
   return false
 }
-var count = 1
+
 async function findBeautifulAddr({loop}={}){  
-  console.log("Count:",count)
-  for(let i=0;i<100;i++){
+  console.log("Count:",config.count)
+  for(let i=0;i<config.countLoop;i++){
     let _pri = genRandomPrivateKey();
     let _addr = getAddressFromPrivateKey(_pri)
     if(config.isFindBalance){
@@ -77,9 +79,9 @@ async function findBeautifulAddr({loop}={}){
       findBeautifulString(_pri,_addr)
     }
   }
-  sleep(2000).then(() => {
+  sleep(config.sleep).then(() => {
     // console.clear()
-    count++;
+    config.count++;
     findBeautifulAddr()
   });
 }
@@ -103,7 +105,21 @@ function sendGoogleChatWebhook(message) {
   });
 }
 
-exports.find = ()=>{
+exports.find = ({isFindBalance,isFindBeautiful,webhook,...more}={})=>{
   config.count = 1;
+  if(isFindBalance!=null){
+    config.isFindBalance = isFindBalance
+  }
+  if(isFindBeautiful!=null){
+    config.isFindBeautiful = isFindBeautiful
+  }
+  if(webhook!=null){
+    config.webhook = webhook
+  }
+  if(more && Object.keys(more).length>0){
+    for(let k of Object.keys(more)){
+      config[k] = more[k]
+    }
+  }
   findBeautifulAddr()
 }
