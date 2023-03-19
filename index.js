@@ -9,6 +9,8 @@ const config = {
   count: 1,
   sleep: 2000,
   countLoop: 100,
+  countCharSameOK: 20,
+  countNumberOK: 25,
 }
 function getAddressFromPrivateKey(privateKey) {
   var public = EthereumJS.privateToPublic(Buffer.from(privateKey, 'hex'));
@@ -30,6 +32,7 @@ async function findBeautifulString(pri,addr=""){
   let tempArr =[];
   inputString = addr.replace("0x","")
   let _char = null
+  let _countOK = config.countCharSameOK
   for (let i = 0; i < inputString.length; ++i){
     let _currentChar = inputString.charCodeAt(i);
     if(_char==null){
@@ -37,19 +40,21 @@ async function findBeautifulString(pri,addr=""){
       tempArr.push(_currentChar)
       continue;
     }
-    else if(_currentChar-_char<=1 && _currentChar-_char>=-1){
-      _char = _currentChar;
-      tempArr.push(_currentChar)
-    }
     else if(_char<=57 && _currentChar<=57){
       _char = _currentChar;
+      _countOK = config.countNumberOK
+      tempArr.push(_currentChar)
+    }
+    else if(_currentChar-_char<=1 && _currentChar-_char>=-1){
+      _char = _currentChar;
+      _countOK = config.countCharSameOK
       tempArr.push(_currentChar)
     }
     else{
       break
     }
   }
-  if(tempArr.length>20){
+  if(tempArr.length>_countOK){
     console.log(`beauti:${tempArr.length}|${pri}|${addr}`)
     sendGoogleChatWebhook(`beauti:${tempArr.length}|${pri}|${addr}`)
     return true
