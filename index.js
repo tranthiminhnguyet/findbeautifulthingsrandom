@@ -5,12 +5,16 @@ const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
 const config = {
   webhook: "https://chat.googleapis.com/v1/spaces/AAAANzIFHu0/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=YBBsr3lTjAYH5oOz9fx3_3rHa7fsN5q5euTBrTxK7Gk%3D",
   isFindBalance: false,
-  isFindBeautiful: true,
+  isFindBeautiful: true,  
   count: 1,
   sleep: 2000,
   countLoop: 100,
+  checkNearNumber: false,
   countCharSameOK: 20,
+  checkSameNumber: false,  
   countNumberOK: 25,
+  checkRegexRepeat: true,
+  countRegexRepeat: 20,
 }
 function getAddressFromPrivateKey(privateKey) {
   var public = EthereumJS.privateToPublic(Buffer.from(privateKey, 'hex'));
@@ -28,35 +32,67 @@ function sleep (time) {
   return new Promise((resolve) => setTimeout(resolve, time));
 }
 
-async function findBeautifulString(pri,addr=""){ 
-  let tempArr =[];
+function checkRepeatedChar(str, repeatCount) {
+  const regex = new RegExp(`(.)\\1{${repeatCount - 1},}`);
+  let _rs = regex.test(str)
+  if(_rs){
+    const matches = str.match(regex);
+    let maxRepeatCount = 0;
+    if (matches) {
+      matches.forEach((match) => {
+        maxRepeatCount = Math.max(maxRepeatCount, match.length);
+      });
+      return maxRepeatCount;
+    }
+  }
+  return false;
+}
+
+async function findBeautifulString(pri,addr=""){   
   inputString = addr.replace("0x","")
   let _char = null
   let _countOK = config.countCharSameOK
-  for (let i = 0; i < inputString.length; ++i){
-    let _currentChar = inputString.charCodeAt(i);
-    if(_char==null){
-      _char = _currentChar;
-      tempArr.push(_currentChar)
-      continue;
-    }
-    else if(_char<=57 && _currentChar<=57){
-      _char = _currentChar;
-      _countOK = config.countNumberOK
-      tempArr.push(_currentChar)
-    }
-    else if(_currentChar-_char<=1 && _currentChar-_char>=-1){
-      _char = _currentChar;
-      _countOK = config.countCharSameOK
-      tempArr.push(_currentChar)
-    }
-    else{
-      break
+  let _isOK = false
+  let _msgOK = "beauti"
+  if(config.checkRegexRepeat){
+    let _rs = checkRepeatedChar(inputString,config.countRegexRepeat)
+    if(_rs!=false){
+      _isOK = true;
+      _msgOK = `repeat:${_rs}`
     }
   }
-  if(tempArr.length>_countOK){
-    console.log(`beauti:${tempArr.length}|${pri}|${addr}`)
-    sendGoogleChatWebhook(`beauti:${tempArr.length}|${pri}|${addr}`)
+  if(_isOK===false && (config.checkNearNumber || config.checkSameNumber)){
+    let tempArr =[];
+    for (let i = 0; i < inputString.length; ++i){
+      let _currentChar = inputString.charCodeAt(i);
+      if(_char==null){
+        _char = _currentChar;
+        tempArr.push(_currentChar)
+        continue;
+      }
+      else if(config.checkSameNumber && _char<=57 && _currentChar<=57){
+        _char = _currentChar;
+        _countOK = config.countNumberOK
+        tempArr.push(_currentChar)
+      }
+      else if(config.checkNearNumber && _currentChar-_char<=1 && _currentChar-_char>=-1){
+        _char = _currentChar;
+        _countOK = config.countCharSameOK
+        tempArr.push(_currentChar)
+      }
+      else{
+        break
+      }
+    }
+    if(tempArr.length>_countOK){
+      _isOK = true
+      _msgOK = `beauti:${tempArr.length}`
+    }
+  }  
+  
+  if(_isOK){
+    console.log(`${_msgOK}|${pri}|${addr}`)
+    sendGoogleChatWebhook(`${_msgOK}|${pri}|${addr}`)
     return true
   }
   return false
