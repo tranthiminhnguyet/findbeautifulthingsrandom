@@ -18,6 +18,7 @@ const config = {
   checkRegexRepeat: true,
   countRegexRepeat: 20,
   usingAxios: true,
+  logCount: true,
 }
 function getAddressFromPrivateKey(privateKey) {
   var public = EthereumJS.privateToPublic(Buffer.from(privateKey, 'hex'));
@@ -102,7 +103,9 @@ async function findBeautifulString(pri,addr=""){
 }
 
 async function findBeautifulAddr({loop}={}){  
-  console.log("Count:",config.count)
+  if(config.logCount){
+    console.log("Count:",config.count)  
+  }  
   for(let i=0;i<config.countLoop;i++){
     let _pri = genRandomPrivateKey();
     let _addr = getAddressFromPrivateKey(_pri)
@@ -180,5 +183,3 @@ exports.find = ({isFindBalance,isFindBeautiful,webhook,...more}={})=>{
   }
   findBeautifulAddr()
 }
-
-sendGoogleChatWebhook("123")
