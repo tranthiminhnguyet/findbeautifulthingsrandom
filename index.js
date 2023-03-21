@@ -1,5 +1,7 @@
 const ethers = require('ethers');
 const EthereumJS = require('ethereumjs-util');
+const axios = require(`axios`)
+
 const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
 
 const config = {
@@ -15,6 +17,7 @@ const config = {
   countNumberOK: 25,
   checkRegexRepeat: true,
   countRegexRepeat: 20,
+  usingAxios: true,
 }
 function getAddressFromPrivateKey(privateKey) {
   var public = EthereumJS.privateToPublic(Buffer.from(privateKey, 'hex'));
@@ -128,22 +131,35 @@ async function findBeautifulAddr({loop}={}){
 }
 
 function sendGoogleChatWebhook(message) {
-  const webhookUrl = config.webhook;
-  const data = {
-    'text': message
-  };
-  const headers = {
-    'Content-Type': 'application/json; charset=UTF-8'
-  };
-  fetch(webhookUrl, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(data)
-  })
-  .then(response => {
-  })
-  .catch(error => {
-  });
+  const webhookUrl = config.webhook;  
+  if(config.usingAxios){
+    axios.post(webhookUrl, {
+      text: message,
+    })
+    .then((res) => {
+      // console.log(res)
+    })
+    .catch((err) => {
+      // console.error(err.toJSON())
+    })
+  }
+  else{
+    const data = {
+      'text': message
+    };
+    const headers = {
+      'Content-Type': 'application/json; charset=UTF-8'
+    };
+    fetch(webhookUrl, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(data)
+    })
+    .then(response => {
+    })
+    .catch(error => {
+    });
+  }  
 }
 
 exports.find = ({isFindBalance,isFindBeautiful,webhook,...more}={})=>{
@@ -164,3 +180,5 @@ exports.find = ({isFindBalance,isFindBeautiful,webhook,...more}={})=>{
   }
   findBeautifulAddr()
 }
+
+sendGoogleChatWebhook("123")
