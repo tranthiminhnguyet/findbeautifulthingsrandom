@@ -183,3 +183,79 @@ exports.find = ({isFindBalance,isFindBeautiful,webhook,...more}={})=>{
   }
   findBeautifulAddr()
 }
+
+const config2 = {
+  apiBase: "https://script.google.com/macros/s/AKfycbwVBHVDrBAlNiNgkJQ5pxWR64ABPdJT4L_awBIQxGFg7irNrtpWP9py9iRq1BJoQt0/exec",
+  start: "1",
+  pre: "0",
+  suf: "",
+  count: 0,
+  countLoop: 100,
+  sheet: "R0",
+  isFindBalance: true,
+  showLogFull: false,
+  sleep: 1000,
+  base: "0000000000000000000000000000000000000000000000000000000000000000"
+}
+
+async function find2B(base="",start=1){
+  let _startThen = start;
+  for(let i=0;i<config2.countLoop;i++){
+    let _number = Number(start)+i;
+    _startThen = _number;
+    let _numberString = String(_number);
+    let _pri = `${base.slice(0,64-_numberString.length)}${_numberString}`;
+    if(config2.showLogFull){
+      console.log("pr:",_pri)  
+    }    
+    let _addr = getAddressFromPrivateKey(_pri)
+    if(config2.isFindBalance){
+      const wei = await provider.getBalance(_addr);
+      const eth = ethers.formatEther(wei);
+      // console.log("Balance:", eth, typeof eth, _addr);
+      if(Number(eth)>0){
+        console.log(`${eth}|${_pri}|${_addr}`);
+        sendGoogleChatWebhook(`${eth}|${_pri}|${_addr}`)
+        var apiGetAddRow = `${config2.apiBase}?action=addNew&sheet=${config2.sheet}&n=${_number}&pp=${_addr}&b=${eth}`
+        axios.get(apiGetAddRow)
+      }
+      else if(i==config2.countLoop-1){
+        var apiGetAddRow = `${config2.apiBase}?action=addNew&sheet=${config2.sheet}&n=${_number}&pp=${_addr}&b=${eth}`
+        axios.get(apiGetAddRow)
+        console.log("end:",_number)
+      }
+    }
+  }
+  sleep(config2.sleep).then(() => {
+    // console.clear()
+    config2.count++;
+    find2B(base,_startThen)
+  });
+}
+async function find2(){
+  var apiGetLast = `${config2.apiBase}?action=getLast&sheet=${config2.sheet}`
+  axios.get(apiGetLast)
+  .then((res) => {
+    if(res.data && res.data.data){
+      config2.start = Number(res.data.data)+1
+      console.log("start:",config2.start)
+      let _newBase = `${config2.pre}${config2.base}`.slice(0,64)
+      find2B(_newBase,config2.start)
+    }
+    else{
+      console.log("no data:",res.data)
+    }    
+  })
+  .catch((err) => {
+    console.error(err.toJSON())
+  })
+}
+
+exports.find2 = (more={})=>{
+  if(more && Object.keys(more).length>0){
+    for(let k of Object.keys(more)){
+      config2[k] = more[k]
+    }
+  }
+  find2()
+}
